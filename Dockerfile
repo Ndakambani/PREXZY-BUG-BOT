@@ -1,20 +1,43 @@
+name: Node.js CI
 
-FROM node:lts-buster
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  schedule:
+    - cron: '0 */6 * * *'  # Relance toutes les 6 heures
 
-RUN apt-get update && \
-  apt-get install -y \
-  ffmpeg \
-  imagemagick \
-  webp && \
-  apt-get upgrade -y && \
-  rm -rf /var/lib/apt/lists/*
+jobs:
+  build:
 
-COPY package.json .
+    runs-on: ubuntu-latest
 
-RUN npm install && npm install qrcode-terminal
+    strategy:
+      matrix:
+        node-version: [20.x]
 
-COPY . .
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
 
-EXPOSE 3000
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ matrix.node-version }}
 
-CMD ["node", "index.js", "--server"]
+    - name: Install dependencies
+      run: npm install
+
+    - name: Install FFmpeg
+      run: sudo apt-get install -y ffmpeg
+
+    - name: Start application with timeout
+      run: |
+        timeout 21590s npm start  # Limite l'exécution à 5h 59m 56s
+
+    - name: Save state (Optional)
+      run: |
+        ./save_state.sh
